@@ -1,0 +1,11 @@
+{
+  "name": "urbanroof-ddr-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "React + Node DDR report generator for inspection and thermal PDFs.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "generate:sample": "python scripts/extract_ddr.py --inspection \"C:\\Users\\Bhaskar\\Downloads\\Sample Report.pdf\" --thermal \"C:\\Users\\Bhaskar\\Downloads\\Thermal Images.pdf\" --output data\\default-report.json --public-base /data"
+  }
+}

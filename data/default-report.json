@@ -1,0 +1,479 @@
+{
+  "meta": {
+    "title": "Detailed Diagnostic Report (DDR)",
+    "generatedFrom": {
+      "inspectionPdf": "C:\\Users\\Bhaskar\\Downloads\\Sample Report.pdf",
+      "thermalPdf": "C:\\Users\\Bhaskar\\Downloads\\Thermal Images.pdf"
+    },
+    "property": {
+      "customerName": "Not Available",
+      "address": "Not Available",
+      "inspectionDate": "27.09.2022 14:28 IST",
+      "propertyType": "Flat"
+    }
+  },
+  "propertyIssueSummary": {
+    "headline": "Multiple moisture-related defects were observed across the flat, with repeated links to bathroom tile-joint issues, plumbing concerns, and one external wall crack condition.",
+    "keyPoints": [
+      "Skirting-level dampness was reported in the hall, common bedroom, master bedroom, and kitchen.",
+      "The master bedroom wall shows dampness with efflorescence, which is more advanced than the other interior observations.",
+      "Leakage and seepage were also observed below the flat at the parking ceiling and on the common bathroom ceiling.",
+      "The source documents repeatedly point to open tile joints, bathroom-side hollowness, plumbing issues, and one external wall crack zone."
+    ]
+  },
+  "areaWiseObservations": [
+    {
+      "area": "Hall",
+      "observation": "Observed dampness at the skirting level of Hall of Flat No. 103. Supporting exposed-side finding: Observed gaps between the tile joints of Common Bathroom of Flat No. 103. Area sheet description: Hall Skirting level Dampness.",
+      "probableRootCause": "Common Bathroom tile hollowness",
+      "severity": {
+        "label": "Medium",
+        "reasoning": "Moisture signs and open tile joints point to a recurring issue that needs repair before it spreads."
+      },
+      "recommendedActions": [
+        "Open and re-grout the affected tile joints, then check for loose or hollow tiles.",
+        "Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 3",
+            "caption": "Extracted inspection image from page 3 for Hall.",
+            "src": "/data/inspection-images/area-1-page-3-1.png"
+          },
+          {
+            "label": "Inspection source page 3",
+            "caption": "Extracted inspection image from page 3 for Hall.",
+            "src": "/data/inspection-images/area-1-page-3-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 1",
+            "caption": "Thermal source page 1. Hotspot: 28.8 C, Coldspot: 23.4 C.",
+            "src": "/data/thermal-images/thermal-page-1-1.jpg"
+          },
+          {
+            "label": "Thermal page 2",
+            "caption": "Thermal source page 2. Hotspot: 27.4 C, Coldspot: 22.4 C.",
+            "src": "/data/thermal-images/thermal-page-2-1.jpg"
+          },
+          {
+            "label": "Thermal page 3",
+            "caption": "Thermal source page 3. Hotspot: 27 C, Coldspot: 22 C.",
+            "src": "/data/thermal-images/thermal-page-3-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 1",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    },
+    {
+      "area": "Common Bedroom",
+      "observation": "Observed dampness at the skirting level of the Common Bedroom of Flat No. 103. Supporting exposed-side finding: Observed gaps between the tile joints of Common Bathroom of Flat No. 103. Area sheet description: Bedroom Skirting level Dampness.",
+      "probableRootCause": "Common Bathroom tile hollowness",
+      "severity": {
+        "label": "Medium",
+        "reasoning": "Moisture signs and open tile joints point to a recurring issue that needs repair before it spreads."
+      },
+      "recommendedActions": [
+        "Open and re-grout the affected tile joints, then check for loose or hollow tiles.",
+        "Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 3",
+            "caption": "Extracted inspection image from page 3 for Common Bedroom.",
+            "src": "/data/inspection-images/area-2-page-3-1.png"
+          },
+          {
+            "label": "Inspection source page 3",
+            "caption": "Extracted inspection image from page 3 for Common Bedroom.",
+            "src": "/data/inspection-images/area-2-page-3-2.jpg"
+          },
+          {
+            "label": "Inspection source page 4",
+            "caption": "Extracted inspection image from page 4 for Common Bedroom.",
+            "src": "/data/inspection-images/area-2-page-4-1.png"
+          },
+          {
+            "label": "Inspection source page 4",
+            "caption": "Extracted inspection image from page 4 for Common Bedroom.",
+            "src": "/data/inspection-images/area-2-page-4-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 5",
+            "caption": "Thermal source page 5. Hotspot: 25.5 C, Coldspot: 20.5 C.",
+            "src": "/data/thermal-images/thermal-page-5-1.jpg"
+          },
+          {
+            "label": "Thermal page 6",
+            "caption": "Thermal source page 6. Hotspot: 25.8 C, Coldspot: 20.8 C.",
+            "src": "/data/thermal-images/thermal-page-6-1.jpg"
+          },
+          {
+            "label": "Thermal page 7",
+            "caption": "Thermal source page 7. Hotspot: 26.2 C, Coldspot: 21.2 C.",
+            "src": "/data/thermal-images/thermal-page-7-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 2",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    },
+    {
+      "area": "Master Bedroom",
+      "observation": "Observed dampness at the skirting level of Master Bedroom of Flat No. 103. Supporting exposed-side finding: Observed gaps between the tile joints of Master Bedroom Bathroom of Flat No. 103. Area sheet description: Master bedroom Skirting level Dampness.",
+      "probableRootCause": "MB Bathroom tile hollowness",
+      "severity": {
+        "label": "Medium",
+        "reasoning": "Moisture signs and open tile joints point to a recurring issue that needs repair before it spreads."
+      },
+      "recommendedActions": [
+        "Open and re-grout the affected tile joints, then check for loose or hollow tiles.",
+        "Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 4",
+            "caption": "Extracted inspection image from page 4 for Master Bedroom.",
+            "src": "/data/inspection-images/area-3-page-4-1.png"
+          },
+          {
+            "label": "Inspection source page 4",
+            "caption": "Extracted inspection image from page 4 for Master Bedroom.",
+            "src": "/data/inspection-images/area-3-page-4-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 9",
+            "caption": "Thermal source page 9. Hotspot: 25.8 C, Coldspot: 20.8 C.",
+            "src": "/data/thermal-images/thermal-page-9-1.jpg"
+          },
+          {
+            "label": "Thermal page 10",
+            "caption": "Thermal source page 10. Hotspot: 25.9 C, Coldspot: 20.9 C.",
+            "src": "/data/thermal-images/thermal-page-10-1.jpg"
+          },
+          {
+            "label": "Thermal page 11",
+            "caption": "Thermal source page 11. Hotspot: 26 C, Coldspot: 21 C.",
+            "src": "/data/thermal-images/thermal-page-11-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 3",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    },
+    {
+      "area": "Kitchen",
+      "observation": "Observed dampness at the skirting level of Kitchen of Flat No. 103. Supporting exposed-side finding: Observed gaps between the tile joints of Master Bedroom Bathroom of Flat No. 103. Area sheet description: Kitchen Skirting level Dampness.",
+      "probableRootCause": "Master bedroom bathroom",
+      "severity": {
+        "label": "Medium",
+        "reasoning": "Moisture signs and open tile joints point to a recurring issue that needs repair before it spreads."
+      },
+      "recommendedActions": [
+        "Open and re-grout the affected tile joints, then check for loose or hollow tiles.",
+        "Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 4",
+            "caption": "Extracted inspection image from page 4 for Kitchen.",
+            "src": "/data/inspection-images/area-4-page-4-1.png"
+          },
+          {
+            "label": "Inspection source page 4",
+            "caption": "Extracted inspection image from page 4 for Kitchen.",
+            "src": "/data/inspection-images/area-4-page-4-2.jpg"
+          },
+          {
+            "label": "Inspection source page 5",
+            "caption": "Extracted inspection image from page 5 for Kitchen.",
+            "src": "/data/inspection-images/area-4-page-5-1.jpg"
+          },
+          {
+            "label": "Inspection source page 5",
+            "caption": "Extracted inspection image from page 5 for Kitchen.",
+            "src": "/data/inspection-images/area-4-page-5-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 13",
+            "caption": "Thermal source page 13. Hotspot: 26.3 C, Coldspot: 21.3 C.",
+            "src": "/data/thermal-images/thermal-page-13-1.jpg"
+          },
+          {
+            "label": "Thermal page 14",
+            "caption": "Thermal source page 14. Hotspot: 25.6 C, Coldspot: 20.6 C.",
+            "src": "/data/thermal-images/thermal-page-14-1.jpg"
+          },
+          {
+            "label": "Thermal page 15",
+            "caption": "Thermal source page 15. Hotspot: 26.5 C, Coldspot: 21.5 C.",
+            "src": "/data/thermal-images/thermal-page-15-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 4",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    },
+    {
+      "area": "Master Bedroom",
+      "observation": "Observed dampness & efflorescence on the wall surface of Master Bedroom of Flat No. 103. Supporting exposed-side finding: Observed cracks on the External wall of building near Master Bedroom of Flat No. 103. Area sheet description: Master bedroom wall damness.",
+      "probableRootCause": "External wall crack and Duct Issue",
+      "severity": {
+        "label": "High",
+        "reasoning": "Visible salt deposits or cracking suggest the moisture issue has been present long enough to affect surfaces. The inspection checklist also rates the external wall condition as moderate."
+      },
+      "recommendedActions": [
+        "Seal external wall cracks and repair any gaps around service penetrations to reduce water ingress.",
+        "Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 5",
+            "caption": "Extracted inspection image from page 5 for Master Bedroom.",
+            "src": "/data/inspection-images/area-5-page-5-1.jpg"
+          },
+          {
+            "label": "Inspection source page 5",
+            "caption": "Extracted inspection image from page 5 for Master Bedroom.",
+            "src": "/data/inspection-images/area-5-page-5-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 17",
+            "caption": "Thermal source page 17. Hotspot: 25.6 C, Coldspot: 20.6 C.",
+            "src": "/data/thermal-images/thermal-page-17-1.jpg"
+          },
+          {
+            "label": "Thermal page 18",
+            "caption": "Thermal source page 18. Hotspot: 27 C, Coldspot: 22 C.",
+            "src": "/data/thermal-images/thermal-page-18-1.jpg"
+          },
+          {
+            "label": "Thermal page 19",
+            "caption": "Thermal source page 19. Hotspot: 26.7 C, Coldspot: 21.7 C.",
+            "src": "/data/thermal-images/thermal-page-19-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 5",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    },
+    {
+      "area": "Area 6",
+      "observation": "Observed leakage at the Parking ceiling below Flat No. 103. Supporting exposed-side finding: Observed plumbing issue & gaps between the tile joints of Common Bathroom of Flat No. 103. Area sheet description: Parking Area seepage.",
+      "probableRootCause": "Common Bathroom tile hollowness and plumbing issue",
+      "severity": {
+        "label": "High",
+        "reasoning": "Leakage or seepage indicates active moisture movement that can spread and worsen nearby finishes."
+      },
+      "recommendedActions": [
+        "Open and re-grout the affected tile joints, then check for loose or hollow tiles.",
+        "Inspect concealed and exposed plumbing lines near the affected area and repair any leaking joints."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 5",
+            "caption": "Extracted inspection image from page 5 for Area 6.",
+            "src": "/data/inspection-images/area-6-page-5-1.jpg"
+          },
+          {
+            "label": "Inspection source page 5",
+            "caption": "Extracted inspection image from page 5 for Area 6.",
+            "src": "/data/inspection-images/area-6-page-5-2.jpg"
+          },
+          {
+            "label": "Inspection source page 6",
+            "caption": "Extracted inspection image from page 6 for Area 6.",
+            "src": "/data/inspection-images/area-6-page-6-1.jpg"
+          },
+          {
+            "label": "Inspection source page 6",
+            "caption": "Extracted inspection image from page 6 for Area 6.",
+            "src": "/data/inspection-images/area-6-page-6-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 21",
+            "caption": "Thermal source page 21. Hotspot: 27.3 C, Coldspot: 22.3 C.",
+            "src": "/data/thermal-images/thermal-page-21-1.jpg"
+          },
+          {
+            "label": "Thermal page 22",
+            "caption": "Thermal source page 22. Hotspot: 27.3 C, Coldspot: 22.3 C.",
+            "src": "/data/thermal-images/thermal-page-22-1.jpg"
+          },
+          {
+            "label": "Thermal page 23",
+            "caption": "Thermal source page 23. Hotspot: 25.2 C, Coldspot: 20.2 C.",
+            "src": "/data/thermal-images/thermal-page-23-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 6",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    },
+    {
+      "area": "Common Bathroom",
+      "observation": "Observed mild dampness at the ceiling of Common Bathroom of Flat No. 103. Supporting exposed-side finding: Observed gap between tile joints of Common & Master Bedroom Bathrooms of Flat No. 203. Area sheet description: Common Bathroom Ceiling Dampness.",
+      "probableRootCause": "Flat no 203 tile joint open and",
+      "severity": {
+        "label": "Medium",
+        "reasoning": "Moisture is visible but described as mild, so the issue appears active without clear evidence of major damage."
+      },
+      "recommendedActions": [
+        "Open and re-grout the affected tile joints, then check for loose or hollow tiles.",
+        "Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize."
+      ],
+      "supportingImages": {
+        "inspection": [
+          {
+            "label": "Inspection source page 6",
+            "caption": "Extracted inspection image from page 6 for Common Bathroom.",
+            "src": "/data/inspection-images/area-7-page-6-1.jpg"
+          },
+          {
+            "label": "Inspection source page 6",
+            "caption": "Extracted inspection image from page 6 for Common Bathroom.",
+            "src": "/data/inspection-images/area-7-page-6-2.jpg"
+          }
+        ],
+        "thermal": [
+          {
+            "label": "Thermal page 25",
+            "caption": "Thermal source page 25. Hotspot: 25.9 C, Coldspot: 20.9 C.",
+            "src": "/data/thermal-images/thermal-page-25-1.jpg"
+          },
+          {
+            "label": "Thermal page 26",
+            "caption": "Thermal source page 26. Hotspot: 26.9 C, Coldspot: 21.9 C.",
+            "src": "/data/thermal-images/thermal-page-26-1.jpg"
+          },
+          {
+            "label": "Thermal page 27",
+            "caption": "Thermal source page 27. Hotspot: 25.6 C, Coldspot: 20.6 C.",
+            "src": "/data/thermal-images/thermal-page-27-1.jpg"
+          }
+        ]
+      },
+      "sourceNotes": [
+        "Inspection summary point 7",
+        "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF."
+      ]
+    }
+  ],
+  "additionalNotes": [
+    "Thermal pages provide hotspot and coldspot values but do not name the room or area directly.",
+    "The final report keeps thermal images attached as supporting evidence and marks the page-to-area match as inferred where necessary.",
+    "No facts have been added beyond the supplied documents; where clarity is missing, the report says so explicitly."
+  ],
+  "missingOrUnclearInformation": [
+    "Customer name: Not Available",
+    "Property address: Not Available",
+    "Property age: Not Available",
+    "Room labels inside the thermal report: Not Available",
+    "Exact image-to-room mapping inside the thermal report: Not Available"
+  ],
+  "conflicts": [
+    "No direct contradictions were found, but some moisture areas have more than one possible contributing cause in the inspection notes."
+  ],
+  "sourceEvidence": {
+    "checklistFlags": [
+      "Leakage due to concealed plumbing Yes",
+      "Leakage due to damage in Nahani trap/Brickbat coba under tile flooring Yes",
+      "Gaps/Blackish dirt Observed in tile joints Yes",
+      "Gaps around Nahani Trap Joints Yes",
+      "Are there any major or minor cracks observed over external surface? Moderate",
+      "Algae fungus and Moss observed on external wall? Moderate"
+    ],
+    "thermalOverview": [
+      {
+        "page": 1,
+        "sourceName": "RB02380X.JPG",
+        "hotspotC": 28.8,
+        "coldspotC": 23.4
+      },
+      {
+        "page": 2,
+        "sourceName": "RB02386X.JPG",
+        "hotspotC": 27.4,
+        "coldspotC": 22.4
+      },
+      {
+        "page": 3,
+        "sourceName": "RB02395X.JPG",
+        "hotspotC": 27.0,
+        "coldspotC": 22.0
+      },
+      {
+        "page": 4,
+        "sourceName": "RB02402X.JPG",
+        "hotspotC": 25.7,
+        "coldspotC": 20.7
+      },
+      {
+        "page": 5,
+        "sourceName": "RB02403X.JPG",
+        "hotspotC": 25.5,
+        "coldspotC": 20.5
+      },
+      {
+        "page": 6,
+        "sourceName": "RB02404X.JPG",
+        "hotspotC": 25.8,
+        "coldspotC": 20.8
+      },
+      {
+        "page": 7,
+        "sourceName": "RB02405X.JPG",
+        "hotspotC": 26.2,
+        "coldspotC": 21.2
+      },
+      {
+        "page": 8,
+        "sourceName": "RB02406X.JPG",
+        "hotspotC": 26.5,
+        "coldspotC": 21.5
+      },
+      {
+        "page": 9,
+        "sourceName": "RB02392X.JPG",
+        "hotspotC": 25.8,
+        "coldspotC": 20.8
+      },
+      {
+        "page": 10,
+        "sourceName": "RB02393X.JPG",
+        "hotspotC": 25.9,
+        "coldspotC": 20.9
+      }
+    ]
+  }
+}

@@ -1,0 +1,82 @@
+__pycache__
+# ----------------------
+# Node / React
+# ----------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Build files
+dist/
+build/
+.next/
+out/
+
+# ----------------------
+# Environment variables (IMPORTANT)
+# ----------------------
+.env
+.env.local
+.env.development
+.env.production
+
+# ----------------------
+# Logs
+# ----------------------
+logs/
+*.log
+
+# ----------------------
+# OS / Editor junk
+# ----------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ----------------------
+# Temporary / runtime files
+# ----------------------
+tmp/
+temp/
+.cache/
+
+# ----------------------
+# Python (if using backend scripts)
+# ----------------------
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env/
+
+# ----------------------
+# AI / Data pipeline (VERY IMPORTANT)
+# ----------------------
+
+# Raw extracted images (can be huge)
+data/inspection-images/
+data/thermal-images/
+
+# Generated outputs
+data/output/
+data/generated-reports/
+
+# Optional: ignore all data except template
+data/*
+!data/.gitkeep
+!data/default-report.json
+
+# ----------------------
+# Uploads (if user uploads PDFs)
+# ----------------------
+uploads/
+
+# ----------------------
+# Secrets / API keys
+# ----------------------
+*.pem
+*.key
+*.crt
