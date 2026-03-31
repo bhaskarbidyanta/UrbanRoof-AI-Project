@@ -1,47 +1,43 @@
 # UrbanRoof DDR AI Report Generator
 
-React + Node + Python project for the UrbanRoof AI Generalist practical assignment. It reads an inspection PDF and a thermal PDF, extracts text plus embedded images, merges the findings into a structured DDR, and renders the final report in a client-friendly website.
+This project generates a reliable DDR from an inspection PDF and a thermal PDF. It stores extracted images locally, writes an explicit image-mapping JSON, preserves page-level inspection evidence when image extraction is incomplete, and optionally refines the report with Google Gemini or Vertex AI.
 
-## What This Project Does
+## What Changed
 
-- Generates a DDR with:
-  - Property Issue Summary
-  - Area-wise Observations
-  - Probable Root Cause
-  - Severity Assessment with reasoning
-  - Recommended Actions
-  - Additional Notes
-  - Missing or Unclear Information
-- Extracts source images from both PDFs and places them inside the relevant observation sections
-- Uses a deterministic extraction pipeline by default
-- Optionally refines narrative text with an LLM if `OPENAI_API_KEY` or `LLM_API_KEY` is configured
+- Images are stored locally under:
+  - `data/inspection-images/`
+  - `data/thermal-images/`
+- A JSON image map is generated alongside the report:
+  - `data/default-image-mapping.json`
+- Inspection extraction now keeps page renders as valid evidence when pages contain composite photo layouts or incomplete image extraction.
+- AI integration now uses Google AI environment variables instead of hardcoded credentials.
+- The React UI renders local image paths directly and supports embedded-image plus page-render evidence.
 
 ## Stack
 
-- Frontend: React via browser runtime, HTML, CSS
+- Frontend: React, HTML, CSS
 - Backend: Node.js built-in HTTP server
-- PDF pipeline: Python + `PyPDF2`
+- PDF extraction: Python + `PyMuPDF`
+- Optional AI: Google Gemini API or Vertex AI REST endpoint
 
-## Project Structure
+## Key Files
 
-- `server.js` - serves the app and exposes report generation APIs
-- `scripts/extract_ddr.py` - PDF text/image extraction and DDR synthesis
-- `public/index.html` - app shell
-- `public/app.js` - React UI
-- `public/styles.css` - report styling
-- `data/default-report.json` - generated sample DDR
-- `data/inspection-images/` - extracted inspection images
-- `data/thermal-images/` - extracted thermal images
+- `server.js`
+- `scripts/extract_ddr.py`
+- `public/app.js`
+- `public/styles.css`
+- `data/default-report.json`
+- `data/default-image-mapping.json`
 
 ## Run Locally
 
-1. Generate the sample DDR:
+1. Generate the sample DDR and image map:
 
 ```powershell
 python scripts/extract_ddr.py --inspection "C:\Users\Bhaskar\Downloads\Sample Report.pdf" --thermal "C:\Users\Bhaskar\Downloads\Thermal Images.pdf" --output data\default-report.json --public-base /data
 ```
 
-2. Start the app:
+2. Start the web app:
 
 ```powershell
 node server.js
@@ -53,60 +49,52 @@ node server.js
 http://localhost:3000
 ```
 
-## App API
+## API Routes
 
 - `GET /api/report/default`
-  - returns the generated sample DDR JSON
+- `GET /api/image-map/default`
 - `POST /api/generate`
-  - accepts uploaded PDFs as base64 JSON payloads from the website
-  - if no files are uploaded in the UI, the backend falls back to the sample PDFs
 
-## Optional LLM Setup
+## Google AI Setup
 
-Set one of these before running the server if you want LLM refinement:
+Gemini API option:
 
 ```powershell
-$env:OPENAI_API_KEY="your-key"
-$env:OPENAI_MODEL="gpt-4o-mini"
+$env:GOOGLE_API_KEY="your-key"
+$env:GOOGLE_MODEL="gemini-1.5-flash"
 ```
 
-Optional overrides:
+Vertex AI option:
 
 ```powershell
-$env:LLM_API_URL="https://api.openai.com/v1/chat/completions"
-$env:LLM_API_KEY="your-key"
-$env:LLM_MODEL="gpt-4o-mini"
+$env:VERTEX_AI_ENDPOINT="https://your-vertex-endpoint"
+$env:VERTEX_AI_ACCESS_TOKEN="your-token"
 ```
 
-If no key is configured, the app still works using the rule-based extraction pipeline.
+If no Google AI credentials are provided, the system still generates a report using deterministic extraction and synthesis.
 
-## Deployment Notes
+## Reliability Rules
 
-This project can be deployed as a simple Node web service on Render, Railway, or similar platforms.
+- No hardcoded API keys
+- No hallucinated facts
+- Missing information stays `Not Available`
+- Uncertain image-to-area mapping is preserved as page-level evidence instead of being discarded
+- Report generation proceeds even when extraction is partial
 
-- Build command: `none`
-- Start command: `node server.js`
-- Runtime requirements:
-  - Node 24+
-  - Python 3.11+
-- For a hosted demo, either:
-  - pre-generate `data/default-report.json` and keep the sample assets in `data/`
-  - or provide writable disk storage if you want fresh user uploads to be processed on the server
+## Current Output
+
+- `data/default-report.json` contains:
+  - Property Issue Summary
+  - Area-wise Observations
+  - Root Cause
+  - Severity
+  - Recommended Actions
+  - Missing Information
+  - Conflicts
+  - Local image paths under each section
+- `data/default-image-mapping.json` links extracted image evidence to areas using page text and mapping method metadata
 
 ## Known Limitations
 
-- The thermal PDF does not clearly label room names, so thermal images are attached by document order and the report explicitly says that mapping is inferred.
-- Some metadata fields in the source PDFs are blank, so the output correctly marks them as `Not Available`.
-- The extraction logic is designed to generalize to similar reports, but heavily different PDF templates would benefit from stronger layout-aware parsing or OCR.
-- LLM use is optional and currently focused on polishing report wording, not changing factual extraction.
-
-## Suggested Demo Talking Points
-
-- How the pipeline combines inspection observations with thermal evidence
-- How missing data and uncertain image-to-room mapping are handled explicitly instead of being invented
-- Why the system uses deterministic parsing first, then optional LLM refinement second
-- How you would improve it next:
-  - better OCR/layout parsing
-  - stronger room/image linking
-  - persistence in MongoDB or object storage
-  - export to branded PDF
+- Some thermal pages do not include explicit room names, so thermal evidence may be linked by sequence or page-level inference.
+- The extraction is designed for robustness across similar reports, but radically different layouts would still benefit from OCR and stronger layout modeling.

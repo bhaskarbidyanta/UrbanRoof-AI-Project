@@ -68,6 +68,7 @@ data/generated-reports/
 data/*
 !data/.gitkeep
 !data/default-report.json
+!data/default-image-mapping.json
 
 # ----------------------
 # Uploads (if user uploads PDFs)

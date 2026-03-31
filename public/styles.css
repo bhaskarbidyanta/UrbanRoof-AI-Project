@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f3efe6;
   --bg-soft: #fbf8f1;
   --ink: #1f2430;
@@ -156,6 +156,39 @@ button:disabled {
 
 .error-text {
   color: #b91c1c;
+}
+
+.status-strip {
+  margin: 22px 0 0;
+}
+
+.ai-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 251, 245, 0.88);
+  box-shadow: var(--shadow);
+}
+
+.ai-badge strong {
+  font-size: 0.95rem;
+}
+
+.ai-badge span {
+  font-size: 0.92rem;
+}
+
+.ai-badge.online {
+  background: rgba(236, 253, 245, 0.92);
+  border-color: rgba(15, 118, 110, 0.25);
+}
+
+.ai-badge.offline {
+  background: rgba(255, 247, 237, 0.92);
+  border-color: rgba(194, 65, 12, 0.2);
 }
 
 .summary-strip {

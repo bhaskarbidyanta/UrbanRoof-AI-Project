@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 import argparse
+import hashlib
 import json
 import os
 import re
+from collections import defaultdict
 from pathlib import Path
 
-from PyPDF2 import PdfReader
+import fitz
 
 
-AREA_PAGE_MAP = {
-    1: [3],
-    2: [3, 4],
-    3: [4],
-    4: [4, 5],
-    5: [5],
-    6: [5, 6],
-    7: [6],
+CANONICAL_AREAS = ["Hall", "Bedroom", "Kitchen", "Bathroom", "External"]
+AREA_PATTERNS = {
+    "Hall": [r"\bhall\b"],
+    "Bedroom": [r"\bbedroom\b", r"master bedroom", r"common bedroom"],
+    "Kitchen": [r"\bkitchen\b"],
+    "Bathroom": [r"bathroom", r"\bwc\b", r"tile joint", r"nahani", r"plumbing"],
+    "External": [r"external wall", r"parking", r"ceiling below", r"duct", r"crack", r"seepage"],
 }
 
 
@@ -27,328 +28,371 @@ def normalize_spaces(text):
     return re.sub(r"\s+", " ", text or "").strip()
 
 
-def clean_thermal_text(text):
-    return (text or "").replace("\x00", "")
+def slugify(value):
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
-def extract_images_from_page(page, output_dir, prefix, max_images=3, min_size=8000):
+def infer_areas(text):
+    normalized = normalize_spaces(text).lower()
+    matches = []
+    for area, patterns in AREA_PATTERNS.items():
+        if any(re.search(pattern, normalized, re.IGNORECASE) for pattern in patterns):
+            matches.append(area)
+    return matches or ["Page-level"]
+
+
+def build_mapping_reason(text, page_number, areas, method):
+    if method == "keyword":
+        return f"Assigned from page {page_number} using nearby text keywords: {', '.join(areas)}."
+    if method == "sequence":
+        return f"Assigned to {', '.join(areas)} by document order because the page text did not label a room clearly."
+    return f"Kept as page-level evidence from page {page_number} because exact room mapping was unclear."
+
+
+def save_bytes_image(image_bytes, output_dir, filename):
+    ensure_dir(output_dir)
+    path = os.path.join(output_dir, filename)
+    with open(path, "wb") as image_file:
+        image_file.write(image_bytes)
+    return path
+
+
+def render_page_image(page, output_dir, filename, zoom=1.8):
+    ensure_dir(output_dir)
+    pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+    path = os.path.join(output_dir, filename)
+    pix.save(path)
+    return path
+
+
+def extract_embedded_images(page, doc, output_dir, prefix, min_size=6000):
     ensure_dir(output_dir)
     images = []
-    seen_sizes = set()
-    page_images = list(getattr(page, "images", []))
-    ranked = sorted(page_images, key=lambda item: len(item.data), reverse=True)
-
-    for image in ranked:
-        image_size = len(image.data)
-        if image_size < min_size or image_size in seen_sizes:
+    seen = set()
+    for index, image_info in enumerate(page.get_images(full=True), start=1):
+        xref = image_info[0]
+        extracted = doc.extract_image(xref)
+        image_bytes = extracted.get("image")
+        if not image_bytes or len(image_bytes) < min_size:
             continue
-        seen_sizes.add(image_size)
-        ext = Path(image.name).suffix.lower() or ".png"
-        filename = f"{prefix}-{len(images) + 1}{ext}"
-        file_path = os.path.join(output_dir, filename)
-        with open(file_path, "wb") as image_file:
-            image_file.write(image.data)
-        images.append({"filename": filename, "path": file_path, "size": image_size})
-        if len(images) >= max_images:
-            break
-
+        digest = hashlib.md5(image_bytes).hexdigest()
+        if digest in seen:
+            continue
+        seen.add(digest)
+        extension = extracted.get("ext", "png")
+        filename = f"{prefix}-embedded-{index}.{extension}"
+        path = save_bytes_image(image_bytes, output_dir, filename)
+        images.append({"path": path, "filename": filename, "byteSize": len(image_bytes), "xref": xref})
     return images
 
 
 def parse_summary_pairs(text):
-    normalized = normalize_spaces(text)
     pattern = re.compile(
         r"(\d+)\s+(Observed .*? Flat No\. 103)\s+(\d+\.\d+)\s+(Observed .*?(?:Flat No\. 103|Flat No\. 203))",
         re.IGNORECASE,
     )
-    pairs = []
-    for match in pattern.finditer(normalized):
-        pairs.append(
-            {
-                "point_no": int(match.group(1)),
-                "negative_observation": match.group(2).strip(),
-                "positive_observation": match.group(4).strip(),
-            }
-        )
-    return pairs
+    return [
+        {
+            "pointNo": int(match.group(1)),
+            "negativeObservation": normalize_spaces(match.group(2)),
+            "positiveObservation": normalize_spaces(match.group(4)),
+        }
+        for match in pattern.finditer(text)
+    ]
 
 
 def parse_impacted_areas(text):
-    normalized = normalize_spaces(text)
     pattern = re.compile(
         r"Impacted Area\s+(\d+)\s+Negative side Description\s+(.*?)\s+Negative side photographs\s+"
         r"(?:.*?\s+)?Positive side Description\s+(.*?)\s+Positive side photographs",
         re.IGNORECASE,
     )
-    areas = {}
-    for match in pattern.finditer(normalized):
-        area_id = int(match.group(1))
-        areas[area_id] = {
-            "negative_description": match.group(2).strip(),
-            "positive_description": match.group(3).strip(),
+    impacted = {}
+    for match in pattern.finditer(text):
+        impacted[int(match.group(1))] = {
+            "negativeDescription": normalize_spaces(match.group(2)),
+            "positiveDescription": normalize_spaces(match.group(3)),
         }
-    return areas
+    return impacted
 
 
-def parse_checklist_flags(text):
-    normalized = normalize_spaces(text)
-    findings = []
-    checks = [
-        "Leakage due to concealed plumbing Yes",
-        "Leakage due to damage in Nahani trap/Brickbat coba under tile flooring Yes",
-        "Gaps/Blackish dirt Observed in tile joints Yes",
-        "Gaps around Nahani Trap Joints Yes",
-        "Loose Plumbing joints/rust around joints and edges (Flush Tank/shower/angle cock/bibcock, washbasin, etc) Yes",
-        "Are there any major or minor cracks observed over external surface? Moderate",
-        "Algae fungus and Moss observed on external wall? Moderate",
-    ]
-    for item in checks:
-        if item in normalized:
-            findings.append(item)
-    return findings
+def parse_thermal_pages(pages):
+    thermal = []
+    for page in pages:
+        text = page["text"].replace("\x00", "")
+        hotspot = re.search(r"Hotspot\s*:\s*([0-9.]+)\s*[^0-9A-Za-z]?C", text)
+        coldspot = re.search(r"Coldspot\s*:\s*([0-9.]+)\s*[^0-9A-Za-z]?C", text)
+        source_name = re.search(r"Thermal image\s*:\s*([A-Z0-9_.-]+)", text)
+        hotspot_value = float(hotspot.group(1)) if hotspot else None
+        coldspot_value = float(coldspot.group(1)) if coldspot else None
+        spread = round(hotspot_value - coldspot_value, 2) if hotspot_value is not None and coldspot_value is not None else None
+        thermal.append(
+            {
+                "page": page["page"],
+                "sourceName": source_name.group(1) if source_name else f"Thermal page {page['page']}",
+                "hotspotC": hotspot_value if hotspot_value is not None else "Not Available",
+                "coldspotC": coldspot_value if coldspot_value is not None else "Not Available",
+                "spreadC": spread if spread is not None else "Not Available",
+                "possibleMoistureIndicator": bool(spread is not None and (spread >= 4.5 or coldspot_value <= 22.0)),
+            }
+        )
+    return thermal
 
 
-def build_thermal_caption(page_number, hotspot_match, coldspot_match):
-    hotspot = hotspot_match.group(1) if hotspot_match else "Not Available"
-    coldspot = coldspot_match.group(1) if coldspot_match else "Not Available"
-    return f"Thermal source page {page_number}. Hotspot: {hotspot} C, Coldspot: {coldspot} C."
+def severity_for_text(text):
+    lowered = text.lower()
+    if "leakage" in lowered or "seepage" in lowered or "efflorescence" in lowered:
+        return "High", "Active leakage, seepage, or salt deposits suggest a more advanced moisture issue."
+    if "crack" in lowered or "dampness" in lowered or "tile joint" in lowered:
+        return "Medium", "Visible dampness, cracks, or open tile joints point to a recurring issue that needs repair."
+    return "Low", "Only limited evidence is available in the source documents."
 
 
-def parse_thermal_pages(reader, output_dir, public_base):
+def recommended_actions(text):
+    lowered = text.lower()
+    actions = []
+    if "tile joint" in lowered or "hollowness" in lowered:
+        actions.append("Open and re-grout the affected tile joints and check for hollow or loose tiles.")
+    if "plumbing" in lowered or "leakage" in lowered:
+        actions.append("Inspect nearby plumbing lines and fittings, then repair leaking joints before surface restoration.")
+    if "external wall" in lowered or "crack" in lowered:
+        actions.append("Seal external wall cracks and recheck nearby service penetrations for water ingress paths.")
+    if "dampness" in lowered or "seepage" in lowered or "efflorescence" in lowered:
+        actions.append("Dry the affected substrate fully, remove damaged finishes, and repaint only after moisture stabilizes.")
+    return actions or ["Carry out a focused site inspection because the available evidence is incomplete."]
+
+
+def dedupe_preserve(items):
+    seen = set()
+    result = []
+    for item in items:
+        key = normalize_spaces(item).lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result
+
+
+def load_pdf_pages(pdf_path, image_root, document_type):
+    doc = fitz.open(pdf_path)
     pages = []
-    for index, page in enumerate(reader.pages):
-        page_number = index + 1
-        text = clean_thermal_text(page.extract_text() or "")
-        hotspot_match = re.search(r"Hotspot\s*:\s*([0-9.]+)\s*[^0-9A-Za-z]?C", text)
-        coldspot_match = re.search(r"Coldspot\s*:\s*([0-9.]+)\s*[^0-9A-Za-z]?C", text)
-        image_match = re.search(r"Thermal image\s*:\s*([A-Z0-9_.-]+)", text)
-        page_images = extract_images_from_page(page, output_dir, f"thermal-page-{page_number}", max_images=1, min_size=10000)
+    mapping_entries = []
+    for idx in range(doc.page_count):
+        page = doc.load_page(idx)
+        page_number = idx + 1
+        text = normalize_spaces(page.get_text("text"))
+        inferred_areas = infer_areas(text)
+        keyword_mapped = inferred_areas != ["Page-level"]
+        extracted_images = extract_embedded_images(page, doc, image_root, f"page-{page_number}")
+        photo_mentions = len(re.findall(r"Photo\s+\d+", text, re.IGNORECASE))
+        keep_page_render = document_type == "inspection" and (not extracted_images or photo_mentions >= 4)
+
+        if keep_page_render:
+            filename = f"page-{page_number}-render.png"
+            rendered_path = render_page_image(page, image_root, filename)
+            extracted_images.append({"path": rendered_path, "filename": filename, "byteSize": 0, "xref": None, "isPageRender": True})
+
+        image_records = []
+        for image in extracted_images:
+            is_page_render = bool(image.get("isPageRender"))
+            method = "keyword" if keyword_mapped else "page-level"
+            if is_page_render:
+                method = "page-level" if not keyword_mapped else "keyword"
+            record = {
+                "path": image["path"].replace("\\", "/"),
+                "relativePath": image["path"].replace("\\", "/"),
+                "page": page_number,
+                "documentType": document_type,
+                "evidenceType": "page-render" if is_page_render else "embedded-image",
+                "assignedAreas": inferred_areas,
+                "mappingMethod": method,
+                "mappingReason": build_mapping_reason(text, page_number, inferred_areas, method),
+                "textSnippet": text[:240] if text else "Not Available",
+            }
+            image_records.append(record)
+            mapping_entries.append(record)
+
         pages.append(
             {
                 "page": page_number,
-                "hotspot_c": float(hotspot_match.group(1)) if hotspot_match else None,
-                "coldspot_c": float(coldspot_match.group(1)) if coldspot_match else None,
-                "source_name": image_match.group(1) if image_match else f"Thermal page {page_number}",
-                "images": [
-                    {
-                        "label": f"Thermal page {page_number}",
-                        "caption": build_thermal_caption(page_number, hotspot_match, coldspot_match),
-                        "src": f"{public_base}/{Path(output_dir).name}/{item['filename']}",
-                    }
-                    for item in page_images
-                ],
+                "text": text,
+                "areas": inferred_areas,
+                "imageCount": len(image_records),
+                "images": image_records,
+                "pageLevelOnly": all(image["evidenceType"] == "page-render" for image in image_records) if image_records else True,
             }
         )
-    return pages
+    doc.close()
+    return pages, mapping_entries
 
 
-def assign_thermal_groups(thermal_pages, area_count):
-    if area_count <= 0:
-        return {}
-    grouped = {}
-    chunk_size = max(1, len(thermal_pages) // area_count)
-    cursor = 0
-    for area_id in range(1, area_count + 1):
-        next_cursor = cursor + chunk_size
-        if area_id == area_count:
-            next_cursor = len(thermal_pages)
-        grouped[area_id] = thermal_pages[cursor:next_cursor][:3]
-        cursor = next_cursor
-    return grouped
+def build_area_sections(summary_pairs, impacted_areas, inspection_pages, thermal_pages, mapping_entries, public_base):
+    thermal_by_sequence = defaultdict(list)
+    for index, entry in enumerate(thermal_pages):
+        thermal_by_sequence[(index % max(len(summary_pairs), 1)) + 1].append(entry)
+
+    area_sections = []
+    for pair in summary_pairs:
+        point_no = pair["pointNo"]
+        impacted = impacted_areas.get(point_no, {})
+        area_label_match = re.search(r"of\s+(.*?)\s+of Flat", pair["negativeObservation"], re.IGNORECASE)
+        area_label = area_label_match.group(1).strip() if area_label_match else f"Area {point_no}"
+        area_label = re.sub(r"^the\s+", "", area_label, flags=re.IGNORECASE)
+        canonical_areas = [area for area in infer_areas(area_label) if area != "Page-level"] or ["External"]
+
+        inspection_images = [
+            item for item in mapping_entries
+            if item["documentType"] == "inspection" and any(area in item["assignedAreas"] for area in canonical_areas)
+        ]
+
+        thermal_image_entries = []
+        for thermal_page in thermal_by_sequence.get(point_no, []):
+            related = [
+                item for item in mapping_entries
+                if item["documentType"] == "thermal" and item["page"] == thermal_page["page"]
+            ]
+            if not related:
+                related = [{
+                    "path": None,
+                    "page": thermal_page["page"],
+                    "evidenceType": "not-available",
+                    "assignedAreas": canonical_areas,
+                    "mappingMethod": "sequence",
+                    "mappingReason": "Image Not Available",
+                }]
+            for item in related:
+                cloned = dict(item)
+                cloned["mappingMethod"] = "sequence" if item.get("mappingMethod") == "page-level" else item.get("mappingMethod", "sequence")
+                cloned["mappingReason"] = build_mapping_reason("", thermal_page["page"], canonical_areas, cloned["mappingMethod"])
+                cloned["thermalSummary"] = thermal_page
+                thermal_image_entries.append(cloned)
+
+        combined_images = []
+        for entry in inspection_images + thermal_image_entries:
+            relative_path = entry.get("relativePath", "").replace("\\", "/")
+            web_path = f"{public_base}/{relative_path.split('data/', 1)[-1]}" if entry.get("path") else "Image Not Available"
+            combined_images.append(
+                {
+                    "path": web_path,
+                    "documentType": entry.get("documentType", "thermal"),
+                    "evidenceType": entry.get("evidenceType", "not-available"),
+                    "page": entry.get("page", "Not Available"),
+                    "mappingMethod": entry.get("mappingMethod", "page-level"),
+                    "mappingReason": entry.get("mappingReason", "Not Available"),
+                }
+            )
+
+        if not combined_images:
+            combined_images = [{
+                "path": "Image Not Available",
+                "documentType": "Not Available",
+                "evidenceType": "not-available",
+                "page": "Not Available",
+                "mappingMethod": "page-level",
+                "mappingReason": "Image Not Available",
+            }]
+
+        root_cause = impacted.get("positiveDescription") or pair["positiveObservation"] or "Not Available"
+        severity_label, severity_reason = severity_for_text(f"{pair['negativeObservation']} {root_cause}")
+        thermal_notes = []
+        for thermal_page in thermal_by_sequence.get(point_no, []):
+            if thermal_page["possibleMoistureIndicator"]:
+                thermal_notes.append(
+                    f"Thermal page {thermal_page['page']} shows a notable temperature spread (hotspot {thermal_page['hotspotC']} C, coldspot {thermal_page['coldspotC']} C)."
+                )
+        thermal_notes = dedupe_preserve(thermal_notes) or ["Not Available"]
+
+        area_sections.append(
+            {
+                "area": area_label,
+                "canonicalAreas": canonical_areas,
+                "observation": f"{pair['negativeObservation']}. Supporting exposed-side finding: {pair['positiveObservation']}." + (f" Area sheet detail: {impacted.get('negativeDescription')}" if impacted.get("negativeDescription") else ""),
+                "rootCause": root_cause,
+                "severity": {"label": severity_label, "reasoning": severity_reason},
+                "recommendedActions": recommended_actions(f"{pair['negativeObservation']} {root_cause}"),
+                "thermalAssessment": thermal_notes,
+                "imageEvidence": combined_images,
+                "missingInformation": ["Image Not Available"] if combined_images and combined_images[0]["path"] == "Image Not Available" else [],
+            }
+        )
+    return area_sections
 
 
-def score_severity(observation, positive_observation, checklist_flags):
-    text = f"{observation} {positive_observation}".lower()
-    if "leakage" in text or "seepage" in text:
-        label = "High"
-        reason = "Leakage or seepage indicates active moisture movement that can spread and worsen nearby finishes."
-    elif "efflorescence" in text or "crack" in text:
-        label = "High"
-        reason = "Visible salt deposits or cracking suggest the moisture issue has been present long enough to affect surfaces."
-    elif "mild dampness" in text:
-        label = "Medium"
-        reason = "Moisture is visible but described as mild, so the issue appears active without clear evidence of major damage."
-    elif "dampness" in text or "hollowness" in text or "tile joints" in text:
-        label = "Medium"
-        reason = "Moisture signs and open tile joints point to a recurring issue that needs repair before it spreads."
-    else:
-        label = "Low"
-        reason = "Only limited supporting evidence is available in the source documents."
-
-    if any("external surface? Moderate" in flag for flag in checklist_flags) and "external wall" in text:
-        reason += " The inspection checklist also rates the external wall condition as moderate."
-
-    return {"label": label, "reasoning": reason}
-
-
-def recommended_actions(observation, positive_observation):
-    text = f"{observation} {positive_observation}".lower()
-    actions = []
-    if "tile joint" in text or "hollowness" in text:
-        actions.append("Open and re-grout the affected tile joints, then check for loose or hollow tiles.")
-    if "plumbing" in text or "concealed" in text or "leakage" in text:
-        actions.append("Inspect concealed and exposed plumbing lines near the affected area and repair any leaking joints.")
-    if "external wall" in text or "crack" in text:
-        actions.append("Seal external wall cracks and repair any gaps around service penetrations to reduce water ingress.")
-    if "dampness" in text or "seepage" in text or "efflorescence" in text:
-        actions.append("Allow the area to dry after repairs, remove damaged finish layers, and repaint only after moisture levels stabilize.")
-    if not actions:
-        actions.append("Carry out a focused site inspection before starting repairs because the source documents do not provide enough detail.")
-    return actions
-
-
-def extract_property_meta(text):
-    normalized = normalize_spaces(text)
-    metadata = {
-        "Customer Name": "Not Available",
-        "Mobile": "Not Available",
-        "Email": "Not Available",
-        "Address": "Not Available",
-        "Property Age (In years):": "Not Available",
-        "Property Type:": "Not Available",
-    }
-    date_match = re.search(r"Inspection Date and Time:\s*([0-9./]+\s+[0-9:]+\s+IST)", normalized, re.IGNORECASE)
-    metadata["Inspection Date and Time"] = date_match.group(1) if date_match else "Not Available"
-    if re.search(r"Property Type:\s*Flat", normalized, re.IGNORECASE):
-        metadata["Property Type:"] = "Flat"
-    return metadata
+def build_conflicts(area_sections):
+    conflicts = []
+    for area in area_sections:
+        if "External" in area["canonicalAreas"] and "Bathroom" in area["canonicalAreas"]:
+            conflicts.append(f"{area['area']}: moisture may involve both bathroom-side leakage and external-side ingress, so the exact source needs confirmation.")
+    return dedupe_preserve(conflicts) or ["No direct contradictions were detected in the extracted documents."]
 
 
 def build_report(inspection_pdf, thermal_pdf, output_path, public_base):
     output_root = Path(output_path).parent
-    inspection_image_dir = output_root / "inspection-images"
-    thermal_image_dir = output_root / "thermal-images"
-    ensure_dir(str(inspection_image_dir))
-    ensure_dir(str(thermal_image_dir))
+    report_stem = Path(output_path).stem
+    inspection_image_root = output_root / "inspection-images"
+    thermal_image_root = output_root / "thermal-images"
+    ensure_dir(str(inspection_image_root))
+    ensure_dir(str(thermal_image_root))
 
-    inspection_reader = PdfReader(inspection_pdf)
-    thermal_reader = PdfReader(thermal_pdf)
+    inspection_pages, inspection_mapping = load_pdf_pages(inspection_pdf, str(inspection_image_root), "inspection")
+    thermal_pages_raw, thermal_mapping = load_pdf_pages(thermal_pdf, str(thermal_image_root), "thermal")
 
-    inspection_texts = [page.extract_text() or "" for page in inspection_reader.pages]
-    inspection_text = "\n".join(inspection_texts)
-    thermal_pages = parse_thermal_pages(thermal_reader, str(thermal_image_dir), public_base)
+    full_inspection_text = normalize_spaces(" ".join(page["text"] for page in inspection_pages))
+    summary_pairs = parse_summary_pairs(full_inspection_text)
+    impacted_areas = parse_impacted_areas(normalize_spaces(" ".join(page["text"] for page in inspection_pages[:8])))
+    thermal_pages = parse_thermal_pages(thermal_pages_raw)
+    mapping_entries = inspection_mapping + thermal_mapping
 
-    summary_pairs = parse_summary_pairs(inspection_text)
-    area_descriptions = parse_impacted_areas(" ".join(inspection_texts[2:6]))
-    checklist_flags = parse_checklist_flags(" ".join(inspection_texts[6:9]))
-    thermal_groups = assign_thermal_groups(thermal_pages, len(summary_pairs))
-    property_meta = extract_property_meta(inspection_text)
+    area_sections = build_area_sections(summary_pairs, impacted_areas, inspection_pages, thermal_pages, mapping_entries, public_base)
+    conflicts = build_conflicts(area_sections)
 
-    area_reports = []
-    for pair in summary_pairs:
-        area_id = pair["point_no"]
-        area_name_match = re.search(r"of\s+(.*?)\s+of Flat", pair["negative_observation"], re.IGNORECASE)
-        area_name = area_name_match.group(1).strip() if area_name_match else f"Area {area_id}"
-        area_name = re.sub(r"^the\s+", "", area_name, flags=re.IGNORECASE)
-        descriptions = area_descriptions.get(area_id, {})
-        severity = score_severity(pair["negative_observation"], pair["positive_observation"], checklist_flags)
-        actions = recommended_actions(pair["negative_observation"], pair["positive_observation"])
-
-        inspection_images = []
-        for page_number in AREA_PAGE_MAP.get(area_id, []):
-            page = inspection_reader.pages[page_number - 1]
-            page_images = extract_images_from_page(page, str(inspection_image_dir), f"area-{area_id}-page-{page_number}", max_images=2, min_size=9000)
-            for image in page_images:
-                inspection_images.append(
-                    {
-                        "label": f"Inspection source page {page_number}",
-                        "caption": f"Extracted inspection image from page {page_number} for {area_name}.",
-                        "src": f"{public_base}/{inspection_image_dir.name}/{image['filename']}",
-                    }
-                )
-
-        thermal_images = []
-        for thermal_page in thermal_groups.get(area_id, []):
-            thermal_images.extend(thermal_page["images"])
-        if not thermal_images:
-            thermal_images = [{"label": "Thermal image", "caption": "Image Not Available.", "src": None}]
-
-        probable_root_cause = descriptions.get("positive_description", pair["positive_observation"])
-        if area_id == 5 and "external wall" not in probable_root_cause.lower():
-            probable_root_cause = "Observed cracks on the external wall, along with a possible duct-side moisture path."
-
-        observation = (
-            f"{pair['negative_observation']}. Supporting exposed-side finding: {pair['positive_observation']}."
-        )
-        if descriptions.get("negative_description"):
-            observation += f" Area sheet description: {descriptions['negative_description']}."
-
-        area_reports.append(
-            {
-                "area": area_name,
-                "observation": observation,
-                "probableRootCause": probable_root_cause,
-                "severity": severity,
-                "recommendedActions": actions,
-                "supportingImages": {
-                    "inspection": inspection_images or [{"label": "Inspection image", "caption": "Image Not Available.", "src": None}],
-                    "thermal": thermal_images,
-                },
-                "sourceNotes": [
-                    f"Inspection summary point {area_id}",
-                    "Thermal page mapping is inferred from document order because room names are not present in the thermal PDF.",
-                ],
-            }
-        )
+    image_mapping = {
+        "inspection": inspection_mapping,
+        "thermal": thermal_mapping,
+    }
+    mapping_path = output_root / f"{report_stem.replace('-report', '')}-image-mapping.json"
+    with open(mapping_path, "w", encoding="utf-8") as mapping_file:
+        json.dump(image_mapping, mapping_file, indent=2)
 
     report = {
         "meta": {
             "title": "Detailed Diagnostic Report (DDR)",
-            "generatedFrom": {
-                "inspectionPdf": str(inspection_pdf),
-                "thermalPdf": str(thermal_pdf),
+            "generatedFrom": {"inspectionPdf": inspection_pdf, "thermalPdf": thermal_pdf},
+            "imageMappingPath": f"{public_base}/{mapping_path.relative_to(output_root).as_posix()}",
+            "reliability": {
+                "imageStorage": "local-folders",
+                "inspectionImageFolder": f"{public_base}/{inspection_image_root.relative_to(output_root).as_posix()}",
+                "thermalImageFolder": f"{public_base}/{thermal_image_root.relative_to(output_root).as_posix()}",
+                "notes": [
+                    "Inspection pages are kept as page-level evidence when individual photo extraction is incomplete.",
+                    "Images are preserved even when exact room mapping is uncertain.",
+                ],
             },
-            "property": {
-                "customerName": property_meta.get("Customer Name", "Not Available"),
-                "address": property_meta.get("Address", "Not Available"),
-                "inspectionDate": property_meta.get("Inspection Date and Time", "Not Available"),
-                "propertyType": property_meta.get("Property Type:", "Not Available"),
-            },
+        },
+        "rawEvidence": {
+            "inspectionPages": inspection_pages,
+            "thermalPages": thermal_pages,
         },
         "propertyIssueSummary": {
-            "headline": "Multiple moisture-related defects were observed across the flat, with repeated links to bathroom tile-joint issues, plumbing concerns, and one external wall crack condition.",
-            "keyPoints": [
-                "Skirting-level dampness was reported in the hall, common bedroom, master bedroom, and kitchen.",
-                "The master bedroom wall shows dampness with efflorescence, which is more advanced than the other interior observations.",
-                "Leakage and seepage were also observed below the flat at the parking ceiling and on the common bathroom ceiling.",
-                "The source documents repeatedly point to open tile joints, bathroom-side hollowness, plumbing issues, and one external wall crack zone.",
-            ],
+            "headline": "Moisture-related issues were observed across multiple parts of the property, with repeated links to bathroom-side defects, plumbing concerns, and some external-side exposure.",
+            "keyPoints": dedupe_preserve([section["observation"] for section in area_sections])[:5] or ["Not Available"],
         },
-        "areaWiseObservations": area_reports,
-        "additionalNotes": [
-            "Thermal pages provide hotspot and coldspot values but do not name the room or area directly.",
-            "The final report keeps thermal images attached as supporting evidence and marks the page-to-area match as inferred where necessary.",
-            "No facts have been added beyond the supplied documents; where clarity is missing, the report says so explicitly.",
-        ],
-        "missingOrUnclearInformation": [
-            "Customer name: Not Available",
+        "areaWiseObservations": area_sections,
+        "missingInformation": [
+            "Customer details: Not Available",
             "Property address: Not Available",
-            "Property age: Not Available",
             "Room labels inside the thermal report: Not Available",
-            "Exact image-to-room mapping inside the thermal report: Not Available",
+            "Exact image-to-room mapping for some pages: Not Available",
         ],
-        "conflicts": [
-            "No direct contradictions were found, but some moisture areas have more than one possible contributing cause in the inspection notes.",
-        ],
-        "sourceEvidence": {
-            "checklistFlags": checklist_flags,
-            "thermalOverview": [
-                {
-                    "page": page["page"],
-                    "sourceName": page["source_name"],
-                    "hotspotC": page["hotspot_c"] if page["hotspot_c"] is not None else "Not Available",
-                    "coldspotC": page["coldspot_c"] if page["coldspot_c"] is not None else "Not Available",
-                }
-                for page in thermal_pages[:10]
-            ],
-        },
+        "conflicts": conflicts,
     }
 
-    with open(output_path, "w", encoding="utf-8") as output_file:
-        json.dump(report, output_file, indent=2)
+    with open(output_path, "w", encoding="utf-8") as report_file:
+        json.dump(report, report_file, indent=2)
 
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--inspection", required=True)
     parser.add_argument("--thermal", required=True)
@@ -356,7 +400,3 @@ def main():
     parser.add_argument("--public-base", default="/data")
     args = parser.parse_args()
     build_report(args.inspection, args.thermal, args.output, args.public_base)
-
-
-if __name__ == "__main__":
-    main()

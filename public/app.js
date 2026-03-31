@@ -1,4 +1,4 @@
-const { useEffect, useState } = React;
+﻿const { useEffect, useState } = React;
 
 async function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -18,21 +18,40 @@ function SummaryCard({ title, value, tone }) {
   );
 }
 
-function ImageGallery({ title, images }) {
+function AiStatusBadge({ report }) {
+  const aiMeta = report?.meta?.ai;
+  const connected = aiMeta?.provider && aiMeta.provider !== "deterministic-fallback";
+  const label = connected ? "Gemini Connected" : "Fallback Mode";
+  const detail = connected
+    ? `${aiMeta.provider} · ${aiMeta.model || "model not specified"}`
+    : aiMeta?.note || "Google AI credentials not detected";
+
+  return (
+    <div className={`ai-badge ${connected ? "online" : "offline"}`}>
+      <strong>{label}</strong>
+      <span>{detail}</span>
+    </div>
+  );
+}
+
+function EvidenceGallery({ images }) {
   return (
     <div className="image-group">
-      <h4>{title}</h4>
+      <h4>Local Image Evidence</h4>
       <div className="image-grid">
         {images.map((image, index) => (
-          <figure className="report-image" key={`${title}-${index}`}>
-            {image.src ? (
-              <img src={image.src} alt={image.caption || image.label} />
+          <figure className="report-image" key={`${image.path}-${index}`}>
+            {image.path && image.path !== "Image Not Available" ? (
+              <img src={image.path} alt={`Evidence page ${image.page}`} />
             ) : (
               <div className="image-placeholder">Image Not Available</div>
             )}
             <figcaption>
-              <strong>{image.label}</strong>
-              <span>{image.caption}</span>
+              <strong>{image.documentType} · Page {image.page}</strong>
+              <span>{image.evidenceType}</span>
+              <span>{image.mappingMethod}</span>
+              <span>{image.mappingReason}</span>
+              <span>{image.path || "Image Not Available"}</span>
             </figcaption>
           </figure>
         ))}
@@ -51,29 +70,38 @@ function AreaSection({ area }) {
       <p>{area.observation}</p>
       <div className="details-grid">
         <div>
-          <h4>Probable Root Cause</h4>
-          <p>{area.probableRootCause || "Not Available"}</p>
+          <h4>Root Cause</h4>
+          <p>{area.rootCause || "Not Available"}</p>
         </div>
         <div>
-          <h4>Severity Assessment</h4>
+          <h4>Severity</h4>
           <p>
             <strong>{area.severity.label}.</strong> {area.severity.reasoning}
           </p>
         </div>
       </div>
-      <div>
-        <h4>Recommended Actions</h4>
-        <ul>
-          {area.recommendedActions.map((action, index) => (
-            <li key={`${area.area}-action-${index}`}>{action}</li>
-          ))}
-        </ul>
+      <div className="details-grid">
+        <div>
+          <h4>Recommended Actions</h4>
+          <ul>
+            {area.recommendedActions.map((action, index) => (
+              <li key={`${area.area}-action-${index}`}>{action}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h4>Thermal Assessment</h4>
+          <ul>
+            {area.thermalAssessment.map((item, index) => (
+              <li key={`${area.area}-thermal-${index}`}>{item}</li>
+            ))}
+          </ul>
+        </div>
       </div>
-      <ImageGallery title="Inspection Evidence" images={area.supportingImages.inspection} />
-      <ImageGallery title="Thermal Evidence" images={area.supportingImages.thermal} />
+      <EvidenceGallery images={area.imageEvidence} />
       <div className="source-notes">
-        {area.sourceNotes.map((note, index) => (
-          <span key={`${area.area}-note-${index}`}>{note}</span>
+        {area.canonicalAreas.map((item, index) => (
+          <span key={`${area.area}-canonical-${index}`}>{item}</span>
         ))}
       </div>
     </section>
@@ -86,7 +114,7 @@ function App() {
   const [thermalFile, setThermalFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [useLlm, setUseLlm] = useState(true);
+  const [useAi, setUseAi] = useState(true);
 
   useEffect(() => {
     fetch("/api/report/default")
@@ -106,22 +134,15 @@ function App() {
     setError("");
 
     try {
-      const payload = { useLlm };
+      const payload = { useAi };
       if (inspectionFile && thermalFile) {
-        payload.inspectionPdf = {
-          name: inspectionFile.name,
-          content: await fileToDataUrl(inspectionFile),
-        };
-        payload.thermalPdf = {
-          name: thermalFile.name,
-          content: await fileToDataUrl(thermalFile),
-        };
+        payload.inspectionPdf = { name: inspectionFile.name, content: await fileToDataUrl(inspectionFile) };
+        payload.thermalPdf = { name: thermalFile.name, content: await fileToDataUrl(thermalFile) };
       }
-
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
       if (!response.ok) {
@@ -135,20 +156,19 @@ function App() {
     }
   }
 
-  const highSeverityCount = report
-    ? report.areaWiseObservations.filter((item) => item.severity.label === "High").length
+  const imageCount = report
+    ? report.areaWiseObservations.reduce((sum, area) => sum + area.imageEvidence.filter((item) => item.path !== "Image Not Available").length, 0)
     : 0;
 
   return (
     <main className="page-shell">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">AI Generalist Assignment</p>
-          <h1>Detailed Diagnostic Report Generator</h1>
+          <p className="eyebrow">Reliable AI DDR Pipeline</p>
+          <h1>Local-Image DDR Generator</h1>
           <p className="hero-text">
-            Upload an inspection report and a thermal report, then generate a client-ready DDR
-            with merged findings, severity reasoning, recommended actions, and source images placed
-            under the matching observations.
+            This version stores extracted evidence locally, keeps page-level inspection renders when photo extraction is incomplete,
+            uses explainable image mapping, and optionally refines the report with Google Gemini or Vertex AI.
           </p>
         </div>
         <form className="upload-card" onSubmit={generateReport}>
@@ -161,26 +181,26 @@ function App() {
             <input type="file" accept="application/pdf" onChange={(e) => setThermalFile(e.target.files[0] || null)} />
           </label>
           <label className="toggle">
-            <input type="checkbox" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
-            <span>Refine narrative fields with LLM when API credentials are configured</span>
+            <input type="checkbox" checked={useAi} onChange={(e) => setUseAi(e.target.checked)} />
+            <span>Use Google AI when environment credentials are available</span>
           </label>
-          <button type="submit" disabled={loading}>
-            {loading ? "Generating..." : "Generate DDR"}
-          </button>
-          <p className="helper">
-            If no files are uploaded, the app uses the sample PDFs referenced in the assignment.
-          </p>
+          <button type="submit" disabled={loading}>{loading ? "Generating..." : "Generate DDR"}</button>
+          <p className="helper">If no files are uploaded, the sample PDFs from your Downloads folder are used.</p>
           {error ? <p className="error-text">{error}</p> : null}
         </form>
       </section>
 
       {report ? (
         <>
+          <section className="status-strip">
+            <AiStatusBadge report={report} />
+          </section>
+
           <section className="summary-strip">
-            <SummaryCard title="Areas Analysed" value={report.areaWiseObservations.length} />
-            <SummaryCard title="High Severity Areas" value={highSeverityCount} tone="warn" />
-            <SummaryCard title="Inspection Date" value={report.meta.property.inspectionDate || "Not Available"} />
-            <SummaryCard title="LLM Status" value={report.meta.llm?.note || "Rule-based only"} />
+            <SummaryCard title="Areas" value={report.areaWiseObservations.length} />
+            <SummaryCard title="Images Linked" value={imageCount} />
+            <SummaryCard title="Image Map" value={report.meta.imageMappingPath || "Not Available"} />
+            <SummaryCard title="AI Status" value={report.meta.ai?.note || "Deterministic fallback"} tone="warn" />
           </section>
 
           <section className="report-shell">
@@ -190,9 +210,9 @@ function App() {
                 <h2>{report.meta.title}</h2>
               </div>
               <div className="property-meta">
-                <span>Customer: {report.meta.property.customerName || "Not Available"}</span>
-                <span>Address: {report.meta.property.address || "Not Available"}</span>
-                <span>Property Type: {report.meta.property.propertyType || "Not Available"}</span>
+                <span>Inspection PDF: {report.meta.generatedFrom.inspectionPdf}</span>
+                <span>Thermal PDF: {report.meta.generatedFrom.thermalPdf}</span>
+                <span>Mapping File: {report.meta.imageMappingPath}</span>
               </div>
             </div>
 
@@ -209,37 +229,29 @@ function App() {
             <section className="report-block">
               <h3>Area-wise Observations</h3>
               <div className="area-list">
-                {report.areaWiseObservations.map((area) => (
-                  <AreaSection area={area} key={area.area} />
-                ))}
+                {report.areaWiseObservations.map((area) => <AreaSection area={area} key={area.area} />)}
               </div>
             </section>
 
             <section className="report-block twin">
               <div>
-                <h3>Additional Notes</h3>
+                <h3>Missing Information</h3>
                 <ul>
-                  {report.additionalNotes.map((note, index) => (
-                    <li key={`note-${index}`}>{note}</li>
-                  ))}
+                  {report.missingInformation.map((item, index) => <li key={`missing-${index}`}>{item}</li>)}
                 </ul>
               </div>
               <div>
-                <h3>Missing or Unclear Information</h3>
+                <h3>Conflicts</h3>
                 <ul>
-                  {report.missingOrUnclearInformation.map((item, index) => (
-                    <li key={`missing-${index}`}>{item}</li>
-                  ))}
+                  {report.conflicts.map((item, index) => <li key={`conflict-${index}`}>{item}</li>)}
                 </ul>
               </div>
             </section>
 
             <section className="report-block">
-              <h3>Conflict Handling</h3>
+              <h3>Reliability Notes</h3>
               <ul>
-                {report.conflicts.map((item, index) => (
-                  <li key={`conflict-${index}`}>{item}</li>
-                ))}
+                {report.meta.reliability.notes.map((note, index) => <li key={`rel-${index}`}>{note}</li>)}
               </ul>
             </section>
           </section>
@@ -247,7 +259,7 @@ function App() {
       ) : (
         <section className="empty-state">
           <h2>No report loaded yet</h2>
-          <p>Generate a report from the sample documents or upload a fresh pair of PDFs.</p>
+          <p>Generate a report to see local evidence mapping and structured DDR sections.</p>
         </section>
       )}
     </main>
